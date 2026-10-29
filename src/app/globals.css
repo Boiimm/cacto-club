@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+/* ضبط عام لضمان استقرار الشاشة على جميع الأجهزة وتجنب التمرير الأفقي */
+html, body {
+  overflow-x: hidden;
+  background-color: #F7F4EF;
+  color: #4B382A;
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* تنسيق متجاوب للصور لتتأقلم مع حجم الشاشات المختلفة */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* تخصيص شريط التمرير (Scrollbar) ليتناسب مع ألوان الهوية البصرية للبراند */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F7F4EF;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D4C5B9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8C6D53;
+}
