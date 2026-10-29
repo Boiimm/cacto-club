@@ -3,17 +3,32 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { translations } from "@/locales/translations";
 
 export default function Home() {
-  const [lang, setLang] = useState('en'); // الإنجليزية هي الأساس الآن
-  const t = translations[lang];
+  const [lang, setLang] = useState('en');
+
+  // جلب اللغة المخزنة أول ما الصفحة تفتح
+  useEffect(() => {
+    const savedLang = localStorage.getItem("cacto_lang");
+    if (savedLang) {
+      setLang(savedLang);
+    }
+  }, []);
+
+  // دالة لتغيير وحفظ اللغة
+  const handleSetLang = (newLang) => {
+    setLang(newLang);
+    localStorage.setItem("cacto_lang", newLang);
+  };
+
+  const t = translations[lang] || translations.en;
 
   return (
     <main dir={lang === 'ar' ? 'rtl' : 'ltr'} className="min-h-screen bg-[#F7F4EF] flex flex-col justify-between">
       <div>
-        <Navbar lang={lang} setLang={setLang} />
+        <Navbar lang={lang} setLang={handleSetLang} />
 
         {/* قسم الواجهة */}
         <section className="flex flex-col items-center justify-center text-center py-24 px-4">
