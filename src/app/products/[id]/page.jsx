@@ -1,5 +1,8 @@
+export const dynamic = 'force-dynamic';
+
 "use client";
 import { useState, useEffect } from "react";
+// باقي كود الصفحة...
 import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
