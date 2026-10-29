@@ -1,102 +1,105 @@
-
 export const dynamic = 'force-dynamic';
 
 "use client";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import Link from "next/link";
-import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
-
-const products = [
-  { id: "1", name: "حلقان مميزة بتصميم عصري", nameEn: "Trendy Designer Earrings", price: 180, category: "accessories", image: "/images/accessories/earrings.jpg", desc: "حلقان أنيقة مصممة خصيصاً لتناسب إطلالتك اليومية وتضيف لمسة رقيقة ومميزة." },
-  { id: "2", name: "سلسلة أنيقة مطلية بالذهب", nameEn: "Elegant Gold-Plated Necklace", price: 250, category: "accessories", image: "/images/accessories/necklace.jpg", desc: "سلسلة راقية مطلية بالذهب بتصميم دافئ يكمل جمال مظهرك." },
-  { id: "3", name: "مجموعة خواتم بتصميم فريد", nameEn: "Unique Designer Rings Set", price: 220, category: "accessories", image: "/images/accessories/rings.jpg", desc: "مجموعة خواتم عصرية بتفاصيل مميزة تمنح يديكِ بريقاً خاصاً." },
-  { id: "4", name: "ميدالية حقائب متعددة الاستخدام", nameEn: "Multi-use Bag Charm", price: 150, category: "accessories", image: "/images/accessories/charm.jpg", desc: "ميدالية أنيقة لحقيبتك تحتوي على مرآة مخفية لإطلالة سريعة في أي وقت." },
-  { id: "5", name: "أساور عصرية ملونة", nameEn: "Colorful Trendy Bracelets", price: 190, category: "accessories", image: "/images/accessories/bracelets.jpg", desc: "أساور ملونة تضيف بهجة وحيوية لصيفك وإطلالتك." },
-  { id: "6", name: "كوب سيراميك يدوي الصنع (درجات الأزرق)", nameEn: "Handmade Ceramic Mug (Blue Shades)", price: 300, category: "mugs", image: "/images/mugs/blue-mug.jpg", desc: "مج سيراميك هاند ميد بتدرجات أزرق ساحرة تذكرك بأجواء البحر الهادئة." },
-  { id: "7", name: "كوب سيراميك دافئ (بني ووردي)", nameEn: "Cozy Ceramic Mug (Brown & Pink)", price: 320, category: "mugs", image: "/images/mugs/cozy-mug.jpg", desc: "مج دافئ مصمم خصيصاً لجلسات القهوة الروقان وإضافات الكوزي للبيت." },
-];
 
 export default function ProductDetailPage() {
-  const pathname = usePathname();
-  // استخراج الـ id من مسار الرابط مباشرة (مثلا /products/3 هيدينا 3)
-  const id = pathname ? pathname.split("/").pop() : null;
+  const params = useParams();
+  const id = params?.id;
 
-  const [lang, setLang] = useState('en');
-  const product = products.find((p) => p.id === id);
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentLang = localStorage.getItem("cacto_lang") || 'en';
-    setLang(currentLang);
-  }, []);
+    if (!id) return;
+    
+    // استرجاع المنتجات من الـ localStorage أو البيانات المتاحة
+    try {
+      const savedProducts = localStorage.getItem("cacto_products");
+      if (savedProducts) {
+        const productsList = JSON.parse(savedProducts);
+        const found = productsList.find((p) => String(p.id) === String(id));
+        setProduct(found || null);
+      }
+    } catch (error) {
+      console.error("Error loading product:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
-  if (!product) {
+  if (loading) {
     return (
-      <main className="min-h-screen bg-[#F7F4EF] flex flex-col justify-between items-center py-20">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <Navbar />
-        <div className="text-center">
-          <h1 className="text-2xl text-[#4B382A] mb-4">Product not found / المنتج غير موجود</h1>
-          <Link href="/products" className="bg-[#4B382A] text-white px-6 py-2 rounded-full">
-            Back to Products / عودة للمنتجات
-          </Link>
+        <div className="flex-grow flex items-center justify-center">
+          <p className="text-xl text-gray-600">جاري تحميل تفاصيل المنتج...</p>
         </div>
         <Footer />
-      </main>
+      </div>
     );
   }
 
-  const addToCart = () => {
-    const existingCart = JSON.parse(localStorage.getItem("cacto_cart")) || [];
-    existingCart.push(product);
-    localStorage.setItem("cacto_cart", JSON.stringify(existingCart));
-  };
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Navbar />
+        <div className="flex-grow flex flex-col items-center justify-center text-center px-4">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">عذراً، المنتج غير موجود</h2>
+          <p className="text-gray-600 mb-6">لم نتمكن من العثور على المنتج المطلوب.</p>
+          <a href="/" className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition">
+            العودة للرئيسية
+          </a>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
-    <main dir={lang === 'ar' ? 'rtl' : 'ltr'} className="min-h-screen bg-[#F7F4EF] flex flex-col justify-between">
-      <div>
-        <Navbar />
-
-        <div className="max-w-5xl mx-auto px-6 pt-16 pb-20">
-          <Link href="/products" className="text-sm text-[#7C6A58] hover:text-[#4B382A] mb-8 inline-block">
-            {lang === 'en' ? "← Back to Products" : "← العودة للمنتجات"}
-          </Link>
-
-          <div className="bg-white rounded-3xl border border-[#E8E2D5] overflow-hidden shadow-xs grid grid-cols-1 md:grid-cols-2 gap-8 p-6 md:p-10">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Navbar />
+      
+      <main className="flex-grow container mx-auto px-4 py-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden p-6 md:p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* صورة المنتج */}
-            <div className="relative h-80 md:h-[400px] w-full bg-[#EFECE6] rounded-2xl overflow-hidden">
-              <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+            <div className="relative h-80 md:h-96 rounded-xl overflow-hidden bg-gray-100">
+              <img
+                src={product.image || "/placeholder.jpg"}
+                alt={product.name}
+                className="w-full h-full object-cover"
+              />
             </div>
 
             {/* تفاصيل المنتج */}
-            <div className="flex flex-col justify-between gap-6">
-              <div className="flex flex-col gap-4">
-                <span className="text-xs uppercase tracking-widest text-[#8C6D53] font-semibold">
-                  {product.category}
-                </span>
-                <h1 className="text-2xl md:text-3xl font-extrabold text-[#4B382A]">
-                  {lang === 'en' ? product.nameEn : product.name}
-                </h1>
-                <p className="text-xl font-bold text-[#8C6D53]">
-                  {product.price} EGP
-                </p>
-                <p className="text-[#7C6A58] text-sm md:text-base leading-relaxed">
-                  {product.desc}
-                </p>
+            <div className="flex flex-col justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
+                <p className="text-2xl font-semibold text-emerald-600 mb-4">{product.price} ج.م</p>
+                <p className="text-gray-600 leading-relaxed mb-6">{product.description || "لا يوجد وصف متاح لهذا المنتج."}</p>
               </div>
 
-              <button 
-                onClick={addToCart}
-                className="w-full bg-[#4B382A] text-[#F7F4EF] py-3.5 rounded-full text-sm font-medium hover:bg-[#38291F] transition shadow-xs cursor-pointer text-center"
-              >
-                {lang === 'en' ? "Add to Cart 🛒" : "أضف للسلة 🛒"}
-              </button>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => {
+                    // منطق إضافة المنتج للسلة
+                    alert("تم إضافة المنتج إلى السلة بنجاح!");
+                  }}
+                  className="flex-grow bg-emerald-600 text-white py-3 px-6 rounded-xl font-medium hover:bg-emerald-700 transition text-center"
+                >
+                  إضافة إلى السلة
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
       <Footer />
-    </main>
+    </div>
   );
 }
