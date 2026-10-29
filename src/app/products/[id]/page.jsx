@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic';
-
 "use client";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
@@ -16,7 +14,6 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (!id) return;
     
-    // استرجاع المنتجات من الـ localStorage أو البيانات المتاحة
     try {
       const savedProducts = localStorage.getItem("cacto_products");
       if (savedProducts) {
@@ -66,7 +63,6 @@ export default function ProductDetailPage() {
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden p-6 md:p-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* صورة المنتج */}
             <div className="relative h-80 md:h-96 rounded-xl overflow-hidden bg-gray-100">
               <img
                 src={product.image || "/placeholder.jpg"}
@@ -75,7 +71,6 @@ export default function ProductDetailPage() {
               />
             </div>
 
-            {/* تفاصيل المنتج */}
             <div className="flex flex-col justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
@@ -86,7 +81,6 @@ export default function ProductDetailPage() {
               <div className="flex gap-4">
                 <button
                   onClick={() => {
-                    // منطق إضافة المنتج للسلة
                     alert("تم إضافة المنتج إلى السلة بنجاح!");
                   }}
                   className="flex-grow bg-emerald-600 text-white py-3 px-6 rounded-xl font-medium hover:bg-emerald-700 transition text-center"
