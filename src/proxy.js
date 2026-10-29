@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export function middleware(request) {
+export function proxy(request) {
   // لو المستخدم بيحاول يدخل على صفحة الـ admin
   if (request.nextUrl.pathname.startsWith('/admin')) {
     // مخصص للأمان الإضافي؛ لو حبيت تمنع الدخول المباشر، 

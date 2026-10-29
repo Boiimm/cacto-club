@@ -44,7 +44,7 @@ function ProductDetailContent() {
 
     // إرسال حدث فوري لتحديث العداد في الـ Navbar
     window.dispatchEvent(new Event("cartUpdated"));
-    alert(lang === "ar" ? "تم إضافة المنتج إلى السلة بنجاح!" : "Product added to cart successfully!");
+    
   };
 
   if (loading) {

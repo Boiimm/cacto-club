@@ -14,12 +14,10 @@ export default function Navbar() {
   };
 
   useEffect(() => {
-    // جلب اللغة والحرص على تحديث عدد السلة عند التحميل
     const currentLang = localStorage.getItem("cacto_lang") || "ar";
     setLang(currentLang);
     updateCartCount();
 
-    // الاستماع لحدث تحديث السلة لتغيير الرقم فوراً
     window.addEventListener("cartUpdated", updateCartCount);
 
     return () => {
@@ -31,7 +29,7 @@ export default function Navbar() {
     const newLang = lang === "ar" ? "en" : "ar";
     setLang(newLang);
     localStorage.setItem("cacto_lang", newLang);
-    window.location.reload(); // تحديث الصفحة لتطبيق اللغة الجديدة في باقي المكونات
+    window.location.reload();
   };
 
   const t = translations[lang] || translations.ar;
@@ -44,17 +42,15 @@ export default function Navbar() {
           Cacto Club <span className="text-[#8C6D53]">🌵</span>
         </Link>
 
-        {/* الروابط */}
+        {/* الروابط (تم حذف رابط الآدمن من هنا) */}
         <div className="hidden md:flex items-center gap-6 font-medium text-gray-700">
           <Link href="/" className="hover:text-[#8C6D53] transition">{t.home || "Home"}</Link>
           <Link href="/products" className="hover:text-[#8C6D53] transition">{t.products || "Products"}</Link>
           <Link href="/contact" className="hover:text-[#8C6D53] transition">{t.contact || "Contact"}</Link>
-          <Link href="/admin" className="hover:text-[#8C6D53] transition">Admin</Link>
         </div>
 
         {/* الأزرار (السلة وزر تغيير اللغة) */}
         <div className="flex items-center gap-3">
-          {/* زر السلة مع عداد المنتجات الفوري */}
           <Link href="/cart" className="relative bg-[#F7F4EF] px-4 py-2 rounded-xl text-[#4B382A] font-medium hover:bg-gray-200 transition flex items-center gap-2">
             <span>🛒</span>
             <span className="hidden sm:inline">{t.cart || "Cart"}</span>
@@ -65,7 +61,6 @@ export default function Navbar() {
             )}
           </Link>
 
-          {/* زر تغيير اللغة */}
           <button
             onClick={handleLanguageToggle}
             className="bg-[#4B382A] text-[#F7F4EF] px-3 py-2 rounded-xl text-sm font-medium hover:bg-[#38291F] transition"
