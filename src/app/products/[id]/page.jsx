@@ -1,118 +1,102 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { translations } from "@/locales/translations";
+import Link from "next/link";
 
-function ProductDetailContent() {
-  const params = useParams();
-  const id = params?.id;
-
-  const [lang, setLang] = useState("ar");
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
+export default function ProductsPage() {
+  const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    const currentLang = localStorage.getItem("cacto_lang") || "ar";
-    setLang(currentLang);
-
-    if (!id) return;
-
     const defaultProducts = [
-      { id: 1, name: "Trendy Designer Earrings", price: 150, image: "/placeholder.jpg", description: "حلقان مميزة بتصميم عصري أنيق يناسب كل الأوقات." },
-      { id: 2, name: "Elegant Gold-Plated Necklace", price: 280, image: "/placeholder.jpg", description: "سلسلة مطليّة بالذهب بتصميم راقي وفريد." },
-      { id: 3, name: "Unique Designer Bracelet", price: 200, image: "/placeholder.jpg", description: "إسوارة بتصميم فريد يضفي لمسة جمالية على إطلالتك." }
+      { id: 1, name: "Trendy Designer Earrings", price: 150, category: "accessories", image: "/placeholder.jpg", description: "حلقان مميزة بتصميم عصري أنيق." },
+      { id: 2, name: "Elegant Gold Necklace", price: 280, category: "accessories", image: "/placeholder.jpg", description: "سلسلة ذهبية راقية." },
+      { id: 3, name: "Handmade Clay Mug 1", price: 220, category: "mugs", image: "/placeholder.jpg", description: "مج فخار مصنوع يدويًا بحب." },
+      { id: 4, name: "Handmade Clay Mug 2", price: 240, category: "mugs", image: "/placeholder.jpg", description: "مج فخار كلاسيكي مميز." },
+      { id: 5, name: "Handmade Clay Mug 3", price: 260, category: "mugs", image: "/placeholder.jpg", description: "مج فخار بتصميم فني راقي." }
     ];
 
-    try {
-      const savedProducts = JSON.parse(localStorage.getItem("cacto_products") || JSON.stringify(defaultProducts));
-      const found = savedProducts.find((p) => String(p.id) === String(id));
-      setProduct(found || null);
-    } catch (error) {
-      console.error("Error loading product:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  const handleAddToCart = () => {
-    if (!product) return;
-    const cart = JSON.parse(localStorage.getItem("cacto_cart") || "[]");
-    cart.push(product);
-    localStorage.setItem("cacto_cart", JSON.stringify(cart));
-
-    // إرسال حدث فوري لتحديث العداد في الـ Navbar
-    window.dispatchEvent(new Event("cartUpdated"));
-    
-  };
-
-  if (loading) {
-    return (
-      <div className="flex-grow flex items-center justify-center py-20">
-        <p className="text-xl text-gray-600">{lang === "ar" ? "جاري تحميل تفاصيل المنتج..." : "Loading product details..."}</p>
-      </div>
-    );
-  }
-
-  if (!product) {
-    return (
-      <div className="flex-grow flex flex-col items-center justify-center text-center px-4 py-20">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">{lang === "ar" ? "عذراً، المنتج غير موجود" : "Sorry, product not found"}</h2>
-        <p className="text-gray-600 mb-6">{lang === "ar" ? "لم نتمكن من العثور على المنتج المطلوب." : "We couldn't find the requested product."}</p>
-        <a href="/products" className="bg-[#4B382A] text-white px-6 py-2 rounded-xl hover:bg-[#38291F] transition">
-          {lang === "ar" ? "العودة للمنتجات" : "Back to Products"}
-        </a>
-      </div>
-    );
-  }
-
-  return (
-    <main className="flex-grow container mx-auto px-4 py-12">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden p-6 md:p-8 max-w-4xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="relative h-80 md:h-96 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
-            <span className="text-gray-400">صورة المنتج</span>
-          </div>
-
-          <div className="flex flex-col justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-[#4B382A] mb-4">{product.name}</h1>
-              <p className="text-2xl font-semibold text-[#8C6D53] mb-4">{product.price} {lang === "ar" ? "ج.م" : "EGP"}</p>
-              <p className="text-gray-600 leading-relaxed mb-6">{product.description || (lang === "ar" ? "لا يوجد وصف متاح." : "No description available.")}</p>
-            </div>
-
-            <button
-              onClick={handleAddToCart}
-              className="w-full bg-[#4B382A] text-[#F7F4EF] py-3 px-6 rounded-xl font-medium hover:bg-[#38291F] transition text-center"
-            >
-              {lang === "ar" ? "إضافة إلى السلة" : "Add to Cart"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
-}
-
-export default function ProductDetailPage() {
-  const [lang, setLang] = useState("ar");
-
-  useEffect(() => {
-    const currentLang = localStorage.getItem("cacto_lang") || "ar";
-    setLang(currentLang);
+    const saved = JSON.parse(localStorage.getItem("cacto_products") || JSON.stringify(defaultProducts));
+    setProducts(saved);
   }, []);
 
+  const handleAddToCart = (product) => {
+    const cart = JSON.parse(localStorage.getItem("cacto_cart") || "[]");
+    const existing = cart.find(item => item.id === product.id);
+    if (existing) {
+      existing.quantity = (existing.quantity || 1) + 1;
+    } else {
+      cart.push({ ...product, quantity: 1 });
+    }
+    localStorage.setItem("cacto_cart", JSON.stringify(cart));
+    window.dispatchEvent(new Event("cartUpdated"));
+  };
+
+  const accessories = products.filter(p => p.category === "accessories");
+  const mugs = products.filter(p => p.category === "mugs");
+
   return (
-    <div className="min-h-screen bg-[#F7F4EF] flex flex-col" dir={lang === "ar" ? "rtl" : "ltr"}>
+    <div className="min-h-screen bg-[#F7F4EF] flex flex-col justify-between" dir="rtl">
       <Navbar />
-      <Suspense fallback={
-        <div className="flex-grow flex items-center justify-center py-20">
-          <p className="text-lg text-gray-500">Loading...</p>
+
+      <main className="container mx-auto px-4 py-12 flex-grow space-y-16">
+        <h1 className="text-4xl font-extrabold text-[#4B382A] text-center">منتجاتنا المميزة 🌵</h1>
+
+        {/* زرارين التنقل السريع */}
+        <div className="flex justify-center gap-4 sticky top-20 z-40 bg-[#F7F4EF]/80 backdrop-blur py-3">
+          <a href="#accessories" className="bg-[#4B382A] text-white px-6 py-2.5 rounded-full text-sm font-medium shadow hover:bg-[#38291F] transition">
+            قسم الإكسسوارات
+          </a>
+          <a href="#mugs" className="bg-[#8C6D53] text-white px-6 py-2.5 rounded-full text-sm font-medium shadow hover:bg-[#725741] transition">
+            قسم مجات الفخار
+          </a>
         </div>
-      }>
-        <ProductDetailContent />
-      </Suspense>
+
+        {/* قسم الإكسسوارات */}
+        <section id="accessories" className="scroll-mt-28">
+          <h2 className="text-2xl font-bold text-[#4B382A] mb-6 border-b pb-2">الإكسسوارات (Accessories)</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {accessories.map(product => (
+              <div key={product.id} className="bg-white rounded-2xl p-4 shadow-sm border flex flex-col justify-between">
+                <div>
+                  <Link href={`/products/${product.id}`}>
+                    <div className="h-48 bg-gray-100 rounded-xl mb-4 flex items-center justify-center text-gray-400">صورة المنتج</div>
+                    <h3 className="text-lg font-bold text-[#4B382A]">{product.name}</h3>
+                  </Link>
+                  <p className="text-sm text-gray-600 mt-2">{product.description}</p>
+                </div>
+                <div className="flex justify-between items-center mt-6">
+                  <span className="font-bold text-[#8C6D53]">{product.price} ج.م</span>
+                  <button onClick={() => handleAddToCart(product)} className="bg-[#4B382A] text-white px-4 py-2 rounded-xl text-sm">أضف للسلة</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* قسم مجات الفخار */}
+        <section id="mugs" className="scroll-mt-28">
+          <h2 className="text-2xl font-bold text-[#4B382A] mb-6 border-b pb-2">مجات الفخار (Clay Mugs)</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {mugs.map(product => (
+              <div key={product.id} className="bg-white rounded-2xl p-4 shadow-sm border flex flex-col justify-between">
+                <div>
+                  <Link href={`/products/${product.id}`}>
+                    <div className="h-48 bg-gray-100 rounded-xl mb-4 flex items-center justify-center text-gray-400">صورة المنتج</div>
+                    <h3 className="text-lg font-bold text-[#4B382A]">{product.name}</h3>
+                  </Link>
+                  <p className="text-sm text-gray-600 mt-2">{product.description}</p>
+                </div>
+                <div className="flex justify-between items-center mt-6">
+                  <span className="font-bold text-[#8C6D53]">{product.price} ج.م</span>
+                  <button onClick={() => handleAddToCart(product)} className="bg-[#4B382A] text-white px-4 py-2 rounded-xl text-sm">أضف للسلة</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+
       <Footer />
     </div>
   );

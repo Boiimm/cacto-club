@@ -9,15 +9,11 @@ import { translations } from "@/locales/translations";
 export default function Home() {
   const [lang, setLang] = useState('en');
 
-  // جلب اللغة المخزنة أول ما الصفحة تفتح
   useEffect(() => {
     const savedLang = localStorage.getItem("cacto_lang");
-    if (savedLang) {
-      setLang(savedLang);
-    }
+    if (savedLang) setLang(savedLang);
   }, []);
 
-  // دالة لتغيير وحفظ اللغة
   const handleSetLang = (newLang) => {
     setLang(newLang);
     localStorage.setItem("cacto_lang", newLang);
@@ -26,31 +22,30 @@ export default function Home() {
   const t = translations[lang] || translations.en;
 
   return (
-    <main dir={lang === 'ar' ? 'rtl' : 'ltr'} className="min-h-screen bg-[#F7F4EF] flex flex-col justify-between">
+    <main dir={lang === 'ar' ? 'rtl' : 'ltr'} className="min-h-screen flex flex-col justify-between bg-cover bg-center" style={{ backgroundImage: `url('')` }}>
       <div>
         <Navbar lang={lang} setLang={handleSetLang} />
 
-        {/* قسم الواجهة */}
-        <section className="flex flex-col items-center justify-center text-center py-24 px-4">
-          <h1 className="text-4xl md:text-6xl font-extrabold text-[#4B382A] mb-4">
+        <section className="flex flex-col items-center justify-center text-center py-28 px-4 bg-black/30 min-h-[70vh]">
+          <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 drop-shadow-md">
             {lang === 'en' ? "Welcome to " : "أهلاً بكِ في "}
-            <span className="text-[#8C6D53]">Cacto Club</span> 🌵
+            <span className="text-[#E6D5C3]">Cacto Club</span> 🌵
           </h1>
-          <p className="text-lg text-[#7C6A58] max-w-xl mb-8">
-            {t.heroDesc}
+          <p className="text-lg text-gray-100 max-w-xl mb-8 drop-shadow">
+            {t.heroDesc || "Discover our unique handmade collections."}
           </p>
           <div className="flex gap-4">
             <Link 
               href="/products" 
-              className="bg-[#4B382A] text-[#F7F4EF] px-8 py-3 rounded-full font-medium shadow-sm hover:bg-[#38291F] transition"
+              className="bg-[#4B382A] text-[#F7F4EF] px-8 py-3 rounded-full font-medium shadow-lg hover:bg-[#38291F] transition"
             >
-              {t.shopNow}
+              {t.shopNow || "Shop Now"}
             </Link>
           </div>
         </section>
       </div>
 
-      <Footer lang={lang} />
+      <Footer />
     </main>
   );
 }

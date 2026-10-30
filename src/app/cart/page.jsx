@@ -1,141 +1,132 @@
 "use client";
-
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function CartPage() {
-  const [lang, setLang] = useState('en');
-  const [cartItems, setCartItems] = useState([]);
+  const router = useRouter();
+  const [cart, setCart] = useState([]);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
 
   useEffect(() => {
-    const currentLang = localStorage.getItem("cacto_lang") || 'en';
-    setLang(currentLang);
-
-    const items = JSON.parse(localStorage.getItem("cacto_cart")) || [];
-    setCartItems(items);
+    const savedCart = JSON.parse(localStorage.getItem("cacto_cart") || "[]");
+    const formatted = savedCart.map(item => ({ ...item, quantity: item.quantity || 1 }));
+    setCart(formatted);
   }, []);
 
-  const removeItem = (indexToRemove) => {
-    const updatedCart = cartItems.filter((_, index) => index !== indexToRemove);
-    setCartItems(updatedCart);
-    localStorage.setItem("cacto_cart", JSON.stringify(updatedCart));
+  const updateCartStorage = (updated) => {
+    setCart(updated);
+    localStorage.setItem("cacto_cart", JSON.stringify(updated));
+    window.dispatchEvent(new Event("cartUpdated"));
   };
 
-  const totalPrice = cartItems.reduce((total, item) => total + item.price, 0);
+  const handleIncrease = (id) => {
+    const updated = cart.map(item => item.id === id ? { ...item, quantity: item.quantity + 1 } : item);
+    updateCartStorage(updated);
+  };
 
-  // دالة إرسال الطلب عبر الواتساب
-  const handleWhatsAppCheckout = () => {
-    if (cartItems.length === 0) return;
+  const handleDecrease = (id) => {
+    const updated = cart.map(item => item.id === id && item.quantity > 1 ? { ...item, quantity: item.quantity - 1 } : item);
+    updateCartStorage(updated);
+  };
 
-    // بناء نص رسالة الأوردر
-    let message = lang === 'en' 
-      ? "Hello Cacto Club! I would like to place an order:\n\n" 
-      : "أهلاً Cacto Club! حابب أطلب الأوردر ده:\n\n";
+  const handleRemove = (id) => {
+    const updated = cart.filter(item => item.id !== id);
+    updateCartStorage(updated);
+  };
 
-    cartItems.forEach((item, index) => {
-      const itemName = lang === 'en' ? (item.nameEn || item.name) : item.name;
-      message += `${index + 1}. ${itemName} - ${item.price} EGP\n`;
+  const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  const handleCheckout = (e) => {
+    e.preventDefault();
+    if (cart.length === 0) return;
+
+    // حفظ الطلب
+    const orders = JSON.parse(localStorage.getItem("cacto_orders") || "[]");
+    orders.push({
+      id: Date.now(),
+      name,
+      phone,
+      address,
+      paymentMethod: paymentMethod === "visa" ? "الدفع الإلكتروني بالفيزا (Visa)" : "الدفع عند الاستلام (Cash)",
+      items: cart,
+      total: totalPrice
     });
+    localStorage.setItem("cacto_orders", JSON.stringify(orders));
 
-    message += lang === 'en' 
-      ? `\nTotal: ${totalPrice} EGP\nPlease confirm my order!` 
-      : `\nالإجمالي: ${totalPrice} ج.م\nبرجاء تأكيد الطلب!`;
-
-    // رقم الواتساب الخاص بالبراند (اكتب رقمك هنا بالصيغة الدولية، مثلاً: 201234567890+)
-    const phoneNumber = "201000000000"; 
-
-    // ترميز الرسالة لرابط الـ URL
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-
-    // فتح رابط الواتساب في تبويب جديد
-    window.open(whatsappUrl, '_blank');
+    // تفريغ السلة وتحديث الناف بار والانتقال لصفحة المنتجات
+    localStorage.removeItem("cacto_cart");
+    window.dispatchEvent(new Event("cartUpdated"));
+    router.push("/products");
   };
 
   return (
-    <main dir={lang === 'ar' ? 'rtl' : 'ltr'} className="min-h-screen bg-[#F7F4EF] flex flex-col justify-between">
-      <div>
-        <Navbar />
+    <div className="min-h-screen bg-[#F7F4EF] flex flex-col justify-between" dir="rtl">
+      <Navbar />
 
-        <div className="max-w-4xl mx-auto px-6 pt-12 pb-20">
-          <h1 className="text-3xl font-extrabold text-[#4B382A] mb-8 text-center">
-            {lang === 'en' ? "Shopping Cart 🛒" : "سلة المشتريات 🛒"}
-          </h1>
+      <main className="container mx-auto px-4 py-12 flex-grow max-w-4xl space-y-8">
+        <h1 className="text-3xl font-bold text-[#4B382A] text-center">سلة المشتريات 🛒</h1>
 
-          {cartItems.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border border-[#E8E2D5] p-8">
-              <p className="text-[#7C6A58] text-lg mb-6">
-                {lang === 'en' ? "Your cart is currently empty." : "سلة المشتريات فارغة حالياً."}
-              </p>
-              <Link 
-                href="/products" 
-                className="bg-[#4B382A] text-[#F7F4EF] px-8 py-3 rounded-full text-sm font-medium hover:bg-[#38291F] transition shadow-xs"
-              >
-                {lang === 'en' ? "Shop Products Now" : "تصفحي المنتجات الآن"}
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="md:col-span-2 flex flex-col gap-4">
-                {cartItems.map((item, index) => (
-                  <div 
-                    key={index} 
-                    className="bg-white p-4 rounded-2xl border border-[#E8E2D5] flex items-center justify-between shadow-xs gap-4"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="relative h-20 w-20 bg-[#EFECE6] rounded-xl overflow-hidden shrink-0">
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-[#4B382A] text-sm md:text-base">
-                          {lang === 'en' ? (item.nameEn || item.name) : item.name}
-                        </h3>
-                        <p className="text-[#8C6D53] text-sm font-semibold mt-1">{item.price} EGP</p>
-                      </div>
-                    </div>
-
-                    <button 
-                      onClick={() => removeItem(index)}
-                      className="text-red-500 hover:text-red-700 text-xs font-medium px-2 py-1 cursor-pointer"
-                    >
-                      {lang === 'en' ? "Remove" : "حذف"}
-                    </button>
+        {cart.length === 0 ? (
+          <div className="bg-white p-10 rounded-2xl text-center shadow-sm">
+            <p className="text-gray-600 mb-4">السلة فارغة حالياً.</p>
+            <button onClick={() => router.push("/products")} className="bg-[#4B382A] text-white px-6 py-2 rounded-xl">تصفح المنتجات</button>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            <div className="bg-white p-6 rounded-2xl shadow-sm space-y-4">
+              {cart.map(item => (
+                <div key={item.id} className="flex justify-between items-center border-b pb-4">
+                  <div>
+                    <h3 className="font-bold text-[#4B382A]">{item.name}</h3>
+                    <p className="text-[#8C6D53]">{item.price} ج.م</p>
                   </div>
-                ))}
-              </div>
-
-              <div className="bg-white p-6 rounded-2xl border border-[#E8E2D5] shadow-xs h-fit flex flex-col gap-4">
-                <h3 className="font-bold text-[#4B382A] text-lg border-b border-[#E8E2D5] pb-3">
-                  {lang === 'en' ? "Order Summary" : "ملخص الطلب"}
-                </h3>
-                <div className="flex justify-between text-sm text-[#7C6A58]">
-                  <span>{lang === 'en' ? "Total Items:" : "إجمالي المنتجات:"}</span>
-                  <span className="font-semibold text-[#4B382A]">{totalPrice} EGP</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex border rounded-xl overflow-hidden">
+                      <button onClick={() => handleDecrease(item.id)} className="px-3 bg-gray-50">-</button>
+                      <span className="px-3 py-1">{item.quantity}</span>
+                      <button onClick={() => handleIncrease(item.id)} className="px-3 bg-gray-50">+</button>
+                    </div>
+                    <button onClick={() => handleRemove(item.id)} className="text-red-500 text-sm">حذف</button>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm text-[#7C6A58]">
-                  <span>{lang === 'en' ? "Shipping:" : "الشحن:"}</span>
-                  <span className="font-semibold text-[#4B382A]">{lang === 'en' ? "Calculated later" : "يُحدد لاحقاً"}</span>
-                </div>
-                <div className="border-t border-[#E8E2D5] pt-3 flex justify-between font-bold text-[#4B382A]">
-                  <span>{lang === 'en' ? "Grand Total:" : "الإجمالي الكلي:"}</span>
-                  <span className="text-[#8C6D53]">{totalPrice} EGP</span>
-                </div>
-
-                <button 
-                  onClick={handleWhatsAppCheckout}
-                  className="w-full bg-[#556B2F] text-white py-3 rounded-full text-sm font-medium hover:bg-[#465926] transition shadow-xs mt-2 text-center cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <span>💬</span> {lang === 'en' ? "Checkout via WhatsApp" : "إتمام الطلب عبر واتساب"}
-                </button>
+              ))}
+              <div className="flex justify-between pt-4 font-bold text-lg">
+                <span>المجموع الكلي:</span>
+                <span className="text-[#8C6D53]">{totalPrice} ج.م</span>
               </div>
             </div>
-          )}
-        </div>
-      </div>
+
+            {/* نموذج إتمام الطلب وطرق الدفع */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm">
+              <h2 className="text-xl font-bold text-[#4B382A] mb-4">بيانات الشحن وطريقة الدفع</h2>
+              <form onSubmit={handleCheckout} className="space-y-4">
+                <input type="text" placeholder="الاسم الكامل" value={name} onChange={(e) => setName(e.target.value)} className="w-full border p-3 rounded-xl" required />
+                <input type="tel" placeholder="رقم الهاتف" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border p-3 rounded-xl" required />
+                <textarea placeholder="عنوان التوصيل بالتفصيل" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full border p-3 rounded-xl" rows="2" required></textarea>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">اختر طريقة الدفع:</label>
+                  <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full border p-3 rounded-xl bg-white">
+                    <option value="cash">الدفع عند الاستلام (Cash)</option>
+                    <option value="visa">الدفع بالفيزا (Visa)</option>
+                  </select>
+                </div>
+
+                <button type="submit" className="w-full bg-[#4B382A] text-white py-3.5 rounded-xl font-medium hover:bg-[#38291F] transition">
+                  تأكيد وإتمام الطلب
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+      </main>
 
       <Footer />
-    </main>
+    </div>
   );
 }

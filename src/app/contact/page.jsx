@@ -1,117 +1,85 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { translations } from "@/locales/translations";
 
 export default function ContactPage() {
-  const [lang, setLang] = useState("ar");
-  const [review, setReview] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  // جلب اللغة الحالية (حسب ما هو محفوظ عندك في المشروع أو localStorage)
-  useEffect(() => {
-    const currentLang = localStorage.getItem("cacto_lang") || "ar";
-    setLang(currentLang);
-  }, []);
-
-  const t = translations[lang] || translations.ar;
+  const [name, setName] = useState("");
+  const [comment, setComment] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    if (!review.trim()) {
-      alert(lang === "ar" ? "برجاء كتابة تقييمك أولاً!" : "Please write your review first!");
-      return;
-    }
+    if (!name || !comment) return;
 
-    const existingReviews = JSON.parse(localStorage.getItem("cacto_reviews") || "[]");
-    
-    const newReview = {
-      id: Date.now(),
-      text: review,
-      date: new Date().toLocaleDateString(lang === "ar" ? 'ar-EG' : 'en-US')
-    };
+    const reviews = JSON.parse(localStorage.getItem("cacto_reviews") || "[]");
+    reviews.push({ name, comment, date: new Date().toLocaleDateString() });
+    localStorage.setItem("cacto_reviews", JSON.stringify(reviews));
 
-    existingReviews.unshift(newReview);
-    localStorage.setItem("cacto_reviews", JSON.stringify(existingReviews));
-
-    setSubmitted(true);
-    setReview("");
-    
-    setTimeout(() => {
-      setSubmitted(false);
-    }, 4000);
+    setName("");
+    setComment("");
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col" dir={lang === "ar" ? "rtl" : "ltr"}>
+    <main className="min-h-screen flex flex-col justify-between bg-cover bg-center" style={{ backgroundImage: `url('')` }}>
       <Navbar />
-      
-      <main className="flex-grow container mx-auto px-4 py-12">
-        <div className="max-w-xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">{t.reviewTitle || "Customer Review"}</h1>
-          <p className="text-gray-500 text-sm mb-6">{t.reviewSubtitle || "Share your thoughts..."}</p>
-          
-          {submitted && (
-            <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm">
-              {t.reviewSuccess}
-            </div>
-          )}
 
-          <form onSubmit={handleSubmit} className="space-y-4 text-start">
+      <div className="container mx-auto px-4 py-16 flex-grow flex items-center justify-center">
+        <div className="bg-white/95 backdrop-blur-md p-8 md:p-10 rounded-3xl shadow-xl max-w-lg w-full border border-white/20 space-y-6">
+          <h1 className="text-3xl font-extrabold text-[#4B382A] text-center">تواصل معنا 🌵</h1>
+          <p className="text-gray-600 text-center text-sm">يسعدنا تواصلك معنا أو متابعتنا عبر منصاتنا الاجتماعية.</p>
+
+          {/* روابط السوشيال ميديا */}
+          <div className="flex justify-center gap-4 py-2">
+            <a href="https://whatsapp.com" target="_blank" rel="noopener noreferrer" className="bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 transition shadow">
+              واتساب (WhatsApp)
+            </a>
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="bg-pink-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-pink-700 transition shadow">
+              إنستجرام (Instagram)
+            </a>
+            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition shadow">
+              فيسبوك (Facebook)
+            </a>
+          </div>
+
+          <hr className="border-gray-200" />
+
+          {/* نموذج إرسال التقييم أو الرسالة */}
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t.yourReview || "Your Review"}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">الاسم الكريم</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="أدخل اسمك..."
+                className="w-full border border-gray-200 p-3 rounded-xl focus:outline-none focus:border-[#8C6D53] bg-white"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">رسالتك أو تقييمك</label>
               <textarea
-                rows="4"
-                value={review}
-                onChange={(e) => setReview(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                placeholder={t.reviewPlaceholder || "Write your review..."}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="اكتب رسالتك هنا..."
+                rows="3"
+                className="w-full border border-gray-200 p-3 rounded-xl focus:outline-none focus:border-[#8C6D53] bg-white"
+                required
               ></textarea>
             </div>
 
             <button
               type="submit"
-              className="w-full bg-emerald-600 text-white py-3 rounded-xl font-medium hover:bg-emerald-700 transition shadow-sm"
+              className="w-full bg-[#4B382A] text-[#F7F4EF] py-3 rounded-xl font-medium hover:bg-[#38291F] transition shadow-md"
             >
-              {t.postReview || "Post Review"}
+              إرسال الرسالة
             </button>
           </form>
-
-          <div className="mt-8 border-t pt-6">
-            <p className="text-sm text-gray-500 mb-4">{t.orConnect || "Or connect with us directly via:"}</p>
-            <div className="flex justify-center gap-3">
-              <a 
-                href="https://whatsapp.com" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700 transition"
-              >
-                {t.whatsapp || "WhatsApp"}
-              </a>
-              <a 
-                href="https://facebook.com" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700 transition"
-              >
-                {t.facebook || "Facebook"}
-              </a>
-              <a 
-                href="https://instagram.com" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="bg-pink-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-pink-700 transition"
-              >
-                {t.instagram || "Instagram"}
-              </a>
-            </div>
-          </div>
         </div>
-      </main>
+      </div>
 
       <Footer />
-    </div>
+    </main>
   );
 }

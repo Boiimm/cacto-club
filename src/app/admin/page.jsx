@@ -4,124 +4,170 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 export default function AdminPage() {
-  const [messages, setMessages] = useState([]);
-  const [activeTab, setActiveTab] = useState("messages");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  // جلب الرسائل المخزنة في localStorage عند تحميل الصفحة
+  const [products, setProducts] = useState([]);
+  const [reviews, setReviews] = useState([]);
+
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("accessories");
+  const [description, setDescription] = useState("");
+  const [image, setImage] = useState("");
+
   useEffect(() => {
-    const savedMessages = JSON.parse(localStorage.getItem("cacto_messages") || "[]");
-    setMessages(savedMessages);
+    // جلب المنتجات والريفيوهات من LocalStorage
+    const defaultProducts = [
+      { id: 1, name: "Trendy Designer Earrings", price: 150, category: "accessories", image: "/placeholder.jpg", description: "حلقان مميزة بتصميم عصري أنيق." },
+      { id: 2, name: "Handmade Clay Mug 1", price: 220, category: "mugs", image: "/placeholder.jpg", description: "مج فخار مصنوع يدويًا بحب." },
+      { id: 3, name: "Handmade Clay Mug 2", price: 240, category: "mugs", image: "/placeholder.jpg", description: "مج فخار كلاسيكي مميز." },
+      { id: 4, name: "Handmade Clay Mug 3", price: 260, category: "mugs", image: "/placeholder.jpg", description: "مج فخار بتصميم فني راقي." }
+    ];
+
+    const savedProducts = JSON.parse(localStorage.getItem("cacto_products") || JSON.stringify(defaultProducts));
+    setProducts(savedProducts);
+
+    const savedReviews = JSON.parse(localStorage.getItem("cacto_reviews") || "[]");
+    setReviews(savedReviews);
   }, []);
 
-  // حساب عدد الرسائل التي لم يتم الرد عليها (غير مقروءة)
-  const unreadCount = messages.filter((msg) => !msg.isRead).length;
-
-  // دالة لتغيير حالة الرسالة (تم الرد / لم يرد بعد)
-  const handleToggleRead = (id) => {
-    const updatedMessages = messages.map((msg) => {
-      if (msg.id === id) {
-        return { ...msg, isRead: !msg.isRead };
-      }
-      return msg;
-    });
-    setMessages(updatedMessages);
-    localStorage.setItem("cacto_messages", JSON.stringify(updatedMessages));
+  const handleLogin = (e) => {
+    e.preventDefault();
+    // بيانات الأمان الخاصة بالآدمن
+    if (username === "admin" && password === "cacto2026") {
+      setIsAuthenticated(true);
+      setError("");
+    } else {
+      setError("اسم المستخدم أو كلمة المرور غير صحيحة!");
+    }
   };
 
-  // دالة لحذف رسالة معينة
-  const handleDeleteMessage = (id) => {
-    const updatedMessages = messages.filter((msg) => msg.id !== id);
-    setMessages(updatedMessages);
-    localStorage.setItem("cacto_messages", JSON.stringify(updatedMessages));
+  const handleAddProduct = (e) => {
+    e.preventDefault();
+    if (!name || !price) return;
+
+    const newProduct = {
+      id: Date.now(),
+      name,
+      price: Number(price),
+      category,
+      description,
+      image: image || "/placeholder.jpg"
+    };
+
+    const updated = [newProduct, ...products];
+    setProducts(updated);
+    localStorage.setItem("cacto_products", JSON.stringify(updated));
+
+    setName("");
+    setPrice("");
+    setDescription("");
+    setImage("");
   };
+
+  const handleDeleteProduct = (id) => {
+    const updated = products.filter(p => p.id !== id);
+    setProducts(updated);
+    localStorage.setItem("cacto_products", JSON.stringify(updated));
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#F7F4EF] flex flex-col justify-between" dir="rtl">
+        <Navbar />
+        <div className="flex-grow flex items-center justify-center px-4">
+          <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 max-w-md w-full space-y-4">
+            <h2 className="text-2xl font-bold text-[#4B382A] text-center mb-6">تسجيل دخول الآدمن 🔒</h2>
+            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+            <input
+              type="text"
+              placeholder="اسم المستخدم"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full border border-gray-200 p-3 rounded-xl focus:outline-none focus:border-[#8C6D53]"
+              required
+            />
+            <input
+              type="password"
+              placeholder="كلمة المرور"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border border-gray-200 p-3 rounded-xl focus:outline-none focus:border-[#8C6D53]"
+              required
+            />
+            <button type="submit" className="w-full bg-[#4B382A] text-white py-3 rounded-xl font-medium hover:bg-[#38291F] transition">
+              دخول للوحة التحكم
+            </button>
+          </form>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-[#F7F4EF] flex flex-col justify-between" dir="rtl">
       <Navbar />
 
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">لوحة التحكم (Admin Panel)</h1>
-          
-          {/* زرار الرسائل مع مؤشر العدد غير المقروء */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActiveTab("messages")}
-              className={`relative px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 ${
-                activeTab === "messages"
-                  ? "bg-emerald-600 text-white"
-                  : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100"
-              }`}
-            >
-              <span>✉️ Customer Messages</span>
-              {unreadCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-md animate-pulse">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
+      <main className="container mx-auto px-4 py-12 flex-grow max-w-4xl space-y-10">
+        <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm">
+          <h1 className="text-2xl font-bold text-[#4B382A]">لوحة التحكم الرئيسية 🌵</h1>
+          <button onClick={() => setIsAuthenticated(false)} className="bg-red-500 text-white px-4 py-2 rounded-xl text-sm">تسجيل الخروج</button>
+        </div>
+
+        {/* إضافة منتج */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-bold text-[#4B382A] mb-4">إضافة منتج جديد</h2>
+          <form onSubmit={handleAddProduct} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input type="text" placeholder="اسم المنتج" value={name} onChange={(e) => setName(e.target.value)} className="border p-3 rounded-xl" required />
+              <input type="number" placeholder="السعر (ج.م)" value={price} onChange={(e) => setPrice(e.target.value)} className="border p-3 rounded-xl" required />
+            </div>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full border p-3 rounded-xl bg-white">
+              <option value="accessories">إكسسوارات (Accessories)</option>
+              <option value="mugs">مجات فخار (Clay Mugs)</option>
+            </select>
+            <input type="text" placeholder="رابط الصورة" value={image} onChange={(e) => setImage(e.target.value)} className="w-full border p-3 rounded-xl" />
+            <textarea placeholder="الوصف" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full border p-3 rounded-xl" rows="2"></textarea>
+            <button type="submit" className="w-full bg-[#4B382A] text-white py-3 rounded-xl font-medium">حفظ وإضافة المنتج</button>
+          </form>
+        </div>
+
+        {/* إدارة المنتجات وحذفها */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-bold text-[#4B382A] mb-4">المنتجات الحالية ({products.length})</h2>
+          <div className="space-y-3 max-h-60 overflow-y-auto">
+            {products.map(p => (
+              <div key={p.id} className="flex justify-between items-center border-b pb-3">
+                <div>
+                  <p className="font-bold text-[#4B382A]">{p.name} <span className="text-xs text-gray-400">({p.category})</span></p>
+                  <p className="text-sm text-[#8C6D53]">{p.price} ج.م</p>
+                </div>
+                <button onClick={() => handleDeleteProduct(p.id)} className="bg-red-500 text-white px-3 py-1 rounded-lg text-xs">حذف</button>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* قسم رسائل العملاء */}
-        {activeTab === "messages" && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">الرسائل الواردة من العملاء</h2>
-              <span className="text-sm text-gray-500">إجمالي الرسائل: {messages.length} | غير متردش عليها: {unreadCount}</span>
+        {/* حقل عرض الريفيوهات */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-bold text-[#4B382A] mb-4">آراء العملاء والريفيوهات ⭐</h2>
+          {reviews.length === 0 ? (
+            <p className="text-gray-500 text-sm">لا توجد ريفيوهات مسجلة حتى الآن.</p>
+          ) : (
+            <div className="space-y-3">
+              {reviews.map((r, i) => (
+                <div key={i} className="border-b pb-2">
+                  <p className="font-bold text-gray-800">{r.name}</p>
+                  <p className="text-sm text-gray-600">{r.comment}</p>
+                </div>
+              ))}
             </div>
-
-            {messages.length === 0 ? (
-              <p className="text-gray-500 text-center py-12">لا توجد رسائل جديدة حتى الآن.</p>
-            ) : (
-              <div className="space-y-4">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`border rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition ${
-                      msg.isRead ? "bg-gray-50/50 border-gray-200" : "bg-emerald-50/30 border-emerald-200"
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center gap-3 mb-1">
-                        <span className="font-bold text-gray-800 text-lg">{msg.name}</span>
-                        <span className="text-xs text-gray-400">({msg.date})</span>
-                        {!msg.isRead && (
-                          <span className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-medium">
-                            لم يتم الرد
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-gray-700 whitespace-pre-wrap">{msg.message}</p>
-                    </div>
-
-                    <div className="flex items-center gap-2 self-end md:self-center">
-                      {/* زر تغيير حالة الرد */}
-                      <button
-                        onClick={() => handleToggleRead(msg.id)}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                          msg.isRead
-                            ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                            : "bg-emerald-600 text-white hover:bg-emerald-700"
-                        }`}
-                      >
-                        {msg.isRead ? "تحديد كـ (لم يرد بعد)" : "تحديد كـ (تم الرد)"}
-                      </button>
-
-                      {/* زر الحذف */}
-                      <button
-                        onClick={() => handleDeleteMessage(msg.id)}
-                        className="bg-red-50 text-red-600 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-red-100 transition"
-                      >
-                        حذف
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </main>
 
       <Footer />

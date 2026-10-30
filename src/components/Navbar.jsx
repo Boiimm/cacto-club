@@ -7,10 +7,10 @@ export default function Navbar() {
   const [lang, setLang] = useState("ar");
   const [cartCount, setCartCount] = useState(0);
 
-  // دالة لحساب عدد المنتجات في السلة
   const updateCartCount = () => {
     const cart = JSON.parse(localStorage.getItem("cacto_cart") || "[]");
-    setCartCount(cart.length);
+    const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    setCartCount(totalItems);
   };
 
   useEffect(() => {
@@ -19,10 +19,7 @@ export default function Navbar() {
     updateCartCount();
 
     window.addEventListener("cartUpdated", updateCartCount);
-
-    return () => {
-      window.removeEventListener("cartUpdated", updateCartCount);
-    };
+    return () => window.removeEventListener("cartUpdated", updateCartCount);
   }, []);
 
   const handleLanguageToggle = () => {
@@ -37,19 +34,20 @@ export default function Navbar() {
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        {/* اللوجو */}
-        <Link href="/" className="text-2xl font-extrabold text-[#4B382A]">
-          Cacto Club <span className="text-[#8C6D53]">🌵</span>
+        {/* اللوجو مع صبارة كاكتو */}
+        <Link href="/" className="text-2xl font-extrabold text-[#4B382A] flex items-center gap-2">
+          <span>Cacto Club</span>
+          <span className="text-2xl">🌵</span>
         </Link>
 
-        {/* الروابط (تم حذف رابط الآدمن من هنا) */}
+        {/* الروابط الأساسية */}
         <div className="hidden md:flex items-center gap-6 font-medium text-gray-700">
           <Link href="/" className="hover:text-[#8C6D53] transition">{t.home || "Home"}</Link>
           <Link href="/products" className="hover:text-[#8C6D53] transition">{t.products || "Products"}</Link>
           <Link href="/contact" className="hover:text-[#8C6D53] transition">{t.contact || "Contact"}</Link>
         </div>
 
-        {/* الأزرار (السلة وزر تغيير اللغة) */}
+        {/* الأزرار (السلة وزر اللغة) */}
         <div className="flex items-center gap-3">
           <Link href="/cart" className="relative bg-[#F7F4EF] px-4 py-2 rounded-xl text-[#4B382A] font-medium hover:bg-gray-200 transition flex items-center gap-2">
             <span>🛒</span>
