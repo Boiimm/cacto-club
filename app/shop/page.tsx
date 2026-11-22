@@ -37,13 +37,7 @@ function ShopContent() {
     <main className="max-w-6xl mx-auto px-4 md:px-8 py-8">
       <div className="flex items-center justify-between gap-4 mb-6">
         <h1 className="text-3xl font-serif-title">Shop Cacto Club</h1>
-        <button
-          type="button"
-          onClick={() => refreshStoreData()}
-          className="text-xs px-3.5 py-1.5 rounded border border-[#D5CFC4] bg-[#FAF8F5] text-[#1E2522] hover:bg-[#EAE5DC] transition"
-        >
-          Sync Sheets
-        </button>
+        
       </div>
 
       <div className="bg-[#FAF8F5] rounded-xl p-6 border border-[#E2DDD5] grid grid-cols-1 md:grid-cols-5 gap-8">
