@@ -23,7 +23,7 @@ export default function Navbar() {
               <span>Menu</span>
             </button>
             <Link href="/account" className="hidden sm:inline text-[#6E6A63] hover:text-black">
-              My Account
+              Track Order
             </Link>
           </div>
 

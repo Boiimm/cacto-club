@@ -1,73 +1,183 @@
 "use client";
-import { useStore, formatEGP } from "@/lib/store";
-import { User } from "lucide-react";
 
-export default function CustomerAccountPage() {
-  const { orders } = useStore();
+import React, { useState } from "react";
+
+interface Order {
+  id: string;
+  date: string;
+  customerName?: string;
+  phone?: string;
+  status: string;
+  total: string | number;
+  items?: string;
+}
+
+export default function AccountTrackPage() {
+  const [phoneInput, setPhoneInput] = useState("");
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [searched, setSearched] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const normalizePhone = (val: string) => {
+    const digits = val.replace(/\D/g, "");
+    return digits.startsWith("20") && digits.length > 10
+      ? "0" + digits.slice(2)
+      : digits;
+  };
+
+  const formatDate = (rawDate: string) => {
+    if (!rawDate) return "-";
+    const parsed = new Date(rawDate);
+    if (isNaN(parsed.getTime())) return rawDate;
+    return parsed.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const handleTrackOrders = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleaned = normalizePhone(phoneInput);
+
+    if (cleaned.length < 10) {
+      setError("Please enter a valid 11-digit mobile number.");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+    setSearched(false);
+
+    try {
+      const sheetUrl = process.env.NEXT_PUBLIC_GOOGLE_SHEETS_URL;
+      if (!sheetUrl) {
+        throw new Error("Store connection is not configured.");
+      }
+
+      const res = await fetch(`${sheetUrl}?action=getOrders`, {
+        cache: "no-store",
+      });
+      const data = await res.json();
+      const allOrders: any[] = Array.isArray(data)
+        ? data
+        : data.orders || data.data || [];
+
+      const matched = allOrders
+        .filter((o) => {
+          const orderPhone = normalizePhone(
+            String(o.phone || o.Phone || o.mobile || o.Mobile || "")
+          );
+          return orderPhone && orderPhone === cleaned;
+        })
+        .map((o) => ({
+          id: String(o.id || o.orderId || o["Order ID"] || "-"),
+          date: String(o.date || o.Date || o.createdAt || ""),
+          customerName: String(
+            o.customerName || o.name || o.Name || o["Customer Name"] || ""
+          ),
+          status: String(o.status || o.Status || "Processing"),
+          total: o.total || o.Total || 0,
+        }));
+
+      setOrders(matched);
+      setSearched(true);
+    } catch (err) {
+      setError("Could not load orders right now. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const customerName = orders[0]?.customerName;
 
   return (
-    <main className="max-w-5xl mx-auto px-4 md:px-8 py-8">
-      <div className="text-center mb-6">
-        <h1 className="text-xl md:text-2xl font-serif-title">My Account | حسابي</h1>
-      </div>
+    <main className="min-h-screen bg-[#f5f0e8] px-4 py-12 text-[#2c2520]">
+      <div className="mx-auto max-w-3xl">
+        <h1 className="mb-2 text-center font-serif text-3xl font-medium">
+          Track Your Order | تتبع طلبك
+        </h1>
+        <p className="mb-8 text-center text-sm text-[#6b5e54]">
+          Enter the mobile number used during checkout to view your order status.
+        </p>
 
-      <div className="bg-[#FAF8F5] rounded-xl border border-[#E2DDD5] p-6 grid grid-cols-1 md:grid-cols-4 gap-8">
-        <aside className="space-y-2 text-xs border-r border-[#E2DDD5] pr-4">
-          <div className="bg-[#EAE5DC] px-3 py-2 rounded font-medium">⌂ Dashboard</div>
-          <div className="px-3 py-2 text-[#6E6A63] flex justify-between items-center">
-            <span>🛒 Orders</span>
-            <span className="bg-[#1E2522] text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
-              {orders.length}
-            </span>
+        <form
+          onSubmit={handleTrackOrders}
+          className="mb-8 flex flex-col gap-3 rounded-xl border border-[#e2d9cd] bg-white p-6 shadow-sm sm:flex-row"
+        >
+          <input
+            type="tel"
+            value={phoneInput}
+            onChange={(e) => setPhoneInput(e.target.value)}
+            placeholder="010xxxxxxxx"
+            className="flex-1 rounded-lg border border-[#d6cbc0] bg-[#faf7f2] px-4 py-3 text-sm outline-none focus:border-[#2c2520]"
+            required
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-[#231f1d] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#3a3330] disabled:opacity-60"
+          >
+            {loading ? "Searching..." : "Track Orders"}
+          </button>
+        </form>
+
+        {error && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
           </div>
-        </aside>
+        )}
 
-        <div className="md:col-span-3 space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-serif-title">Welcome, Ibrahim!</h2>
-            <div className="w-12 h-12 rounded-full bg-[#EAE5DC] flex items-center justify-center text-[#6E6A63]">
-              <User className="w-6 h-6" />
+        {searched && (
+          <div className="rounded-xl border border-[#e2d9cd] bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center justify-between border-b border-[#efe8de] pb-3">
+              <h2 className="font-serif text-xl">
+                {customerName ? `Welcome, ${customerName}` : "Your Orders"}
+              </h2>
+              <span className="rounded-full bg-[#f5f0e8] px-3 py-1 text-xs font-medium text-[#5c5046]">
+                {orders.length} {orders.length === 1 ? "Order" : "Orders"}
+              </span>
             </div>
-          </div>
 
-          <div className="bg-white rounded-lg border border-[#E2DDD5] p-4 overflow-x-auto">
-            <h3 className="text-sm font-semibold mb-3">Orders History (From Google Sheets)</h3>
             {orders.length === 0 ? (
-              <p className="text-xs text-[#6E6A63] py-4">لا توجد طلبات مسجلة في Google Sheets حتى الآن.</p>
+              <p className="py-6 text-center text-sm text-[#6b5e54]">
+                No orders found for this mobile number.
+              </p>
             ) : (
-              <table className="w-full text-left text-xs">
-                <thead className="text-[#6E6A63] border-b border-[#E2DDD5]">
-                  <tr>
-                    <th className="pb-2">Order ID</th>
-                    <th className="pb-2">Date</th>
-                    <th className="pb-2">Status</th>
-                    <th className="pb-2">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E2DDD5]">
-                  {orders.map((o) => (
-                    <tr key={o.orderId}>
-                      <td className="py-2.5">{o.orderId}</td>
-                      <td className="py-2.5 text-[#6E6A63]">{o.date}</td>
-                      <td className="py-2.5">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] ${
-                            o.status === "Processing"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {o.status}
-                        </span>
-                      </td>
-                      <td className="py-2.5 font-medium">{formatEGP(o.total)}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-[#efe8de] text-xs uppercase text-[#7a6d62]">
+                      <th className="py-3 pr-4">Order ID</th>
+                      <th className="py-3 pr-4">Date</th>
+                      <th className="py-3 pr-4">Status</th>
+                      <th className="py-3 text-right">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-[#f3ede4]">
+                    {orders.map((order) => (
+                      <tr key={order.id}>
+                        <td className="py-3.5 pr-4 font-medium">{order.id}</td>
+                        <td className="py-3.5 pr-4 text-[#6b5e54]">
+                          {formatDate(order.date)}
+                        </td>
+                        <td className="py-3.5 pr-4">
+                          <span className="inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 text-right font-medium">
+                          {Number(order.total).toFixed(2)} EGP
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
-        </div>
+        )}
       </div>
     </main>
   );
