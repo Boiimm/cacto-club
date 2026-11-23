@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 
 interface Product {
   id: string;
@@ -57,6 +57,8 @@ export default function AdminDashboardPage() {
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [toast, setToast] = useState("");
+  const [newOrderAlert, setNewOrderAlert] = useState(false);
+  const prevOrdersCountRef = useRef<number | null>(null);
 
   // Product Form Modal
   const [showProductForm, setShowProductForm] = useState(false);
@@ -77,6 +79,26 @@ export default function AdminDashboardPage() {
   const notify = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(""), 3500);
+  };
+
+  const playOrderChime = () => {
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.18);
+    } catch {
+      // Ignore audio autoplay blocks
+    }
   };
 
   const parseNum = (val: unknown) => {
@@ -109,18 +131,27 @@ export default function AdminDashboardPage() {
       );
 
       const rawOrders = Array.isArray(data.orders) ? data.orders : [];
-      setOrders(
-        rawOrders.map((o: Record<string, unknown>, i: number) => ({
-          orderId: String(o.orderId || o["Order ID"] || o.id || `ORD-${i + 1}`),
-          date: String(o.date || o.Date || ""),
-          customerName: String(o.customerName || o["Customer Name"] || o.name || "-"),
-          phone: String(o.phone || o.Phone || "-"),
-          address: String(o.address || o.Address || "-"),
-          items: String(o.items || o.Items || "-"),
-          total: parseNum(o.total ?? o.Total),
-          status: String(o.status || o.Status || "Processing"),
-        }))
-      );
+      const mappedOrders: Order[] = rawOrders.map((o: Record<string, unknown>, i: number) => ({
+        orderId: String(o.orderId || o["Order ID"] || o.id || `ORD-${i + 1}`),
+        date: String(o.date || o.Date || ""),
+        customerName: String(o.customerName || o["Customer Name"] || o.name || "-"),
+        phone: String(o.phone || o.Phone || "-"),
+        address: String(o.address || o.Address || "-"),
+        items: String(o.items || o.Items || "-"),
+        total: parseNum(o.total ?? o.Total),
+        status: String(o.status || o.Status || "Processing"),
+      }));
+
+      if (
+        prevOrdersCountRef.current !== null &&
+        mappedOrders.length > prevOrdersCountRef.current
+      ) {
+        setNewOrderAlert(true);
+        playOrderChime();
+        notify(`New order received! Total orders: ${mappedOrders.length}`);
+      }
+      prevOrdersCountRef.current = mappedOrders.length;
+      setOrders(mappedOrders);
 
       const rawAdmins = Array.isArray(data.admins) ? data.admins : [];
       setAdmins(
@@ -145,9 +176,12 @@ export default function AdminDashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (currentUser) {
+    if (!currentUser) return;
+    fetchAllFromSheets();
+    const interval = setInterval(() => {
       fetchAllFromSheets();
-    }
+    }, 20000);
+    return () => clearInterval(interval);
   }, [currentUser, fetchAllFromSheets]);
 
   const postToSheet = async (payload: Record<string, unknown>) => {
@@ -479,7 +513,10 @@ export default function AdminDashboardPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab("orders")}
+              onClick={() => {
+                setActiveTab("orders");
+                setNewOrderAlert(false);
+              }}
               className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left ${
                 activeTab === "orders" ? "bg-[#eae1d3] font-medium" : "hover:bg-[#f1eae0]"
               }`}
@@ -521,6 +558,31 @@ export default function AdminDashboardPage() {
         </aside>
 
         <section className="flex-1">
+          {newOrderAlert && (
+            <div className="mb-5 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-900">
+              <span>
+                <strong>New Order Alert:</strong> A new order arrived in Google Sheets &ldquo;Orders&rdquo;.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setActiveTab("orders");
+                    setNewOrderAlert(false);
+                  }}
+                  className="rounded-md bg-emerald-800 px-3 py-1 font-medium text-white"
+                >
+                  View Orders
+                </button>
+                <button
+                  onClick={() => setNewOrderAlert(false)}
+                  className="text-emerald-800 hover:underline"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+
           {activeTab === "dashboard" && (
             <div>
               <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
