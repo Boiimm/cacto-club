@@ -8,8 +8,7 @@ interface Order {
   customerName?: string;
   phone?: string;
   status: string;
-  total: string | number;
-  items?: string;
+  total: number;
 }
 
 export default function AccountTrackPage() {
@@ -21,9 +20,21 @@ export default function AccountTrackPage() {
 
   const normalizePhone = (val: string) => {
     const digits = val.replace(/\D/g, "");
-    return digits.startsWith("20") && digits.length > 10
-      ? "0" + digits.slice(2)
-      : digits;
+    if (digits.startsWith("20") && digits.length > 10) {
+      return "0" + digits.slice(2);
+    }
+    if (digits.length === 10 && digits.startsWith("1")) {
+      return "0" + digits;
+    }
+    return digits;
+  };
+
+  const parseTotal = (raw: unknown): number => {
+    if (typeof raw === "number") return isNaN(raw) ? 0 : raw;
+    if (!raw) return 0;
+    const cleaned = String(raw).replace(/[^0-9.]/g, "");
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
   };
 
   const formatDate = (rawDate: string) => {
@@ -37,12 +48,31 @@ export default function AccountTrackPage() {
     });
   };
 
+  const getField = (obj: Record<string, unknown>, keys: string[]) => {
+    for (const k of keys) {
+      if (obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== "") {
+        return obj[k];
+      }
+    }
+    const lowerMap = Object.keys(obj).reduce<Record<string, unknown>>((acc, key) => {
+      acc[key.toLowerCase().trim()] = obj[key];
+      return acc;
+    }, {});
+    for (const k of keys) {
+      const val = lowerMap[k.toLowerCase().trim()];
+      if (val !== undefined && val !== null && String(val).trim() !== "") {
+        return val;
+      }
+    }
+    return "";
+  };
+
   const handleTrackOrders = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleaned = normalizePhone(phoneInput);
 
     if (cleaned.length < 10) {
-      setError("Please enter a valid 11-digit mobile number.");
+      setError("Please enter a valid mobile number.");
       return;
     }
 
@@ -60,30 +90,60 @@ export default function AccountTrackPage() {
         cache: "no-store",
       });
       const data = await res.json();
-      const allOrders: any[] = Array.isArray(data)
+      const allOrders: Record<string, unknown>[] = Array.isArray(data)
         ? data
         : data.orders || data.data || [];
 
       const matched = allOrders
         .filter((o) => {
-          const orderPhone = normalizePhone(
-            String(o.phone || o.Phone || o.mobile || o.Mobile || "")
-          );
+          const rawPhone = getField(o, [
+            "phone",
+            "Phone",
+            "mobile",
+            "Mobile",
+            "phoneNumber",
+            "Phone Number",
+            "customerPhone",
+          ]);
+          const orderPhone = normalizePhone(String(rawPhone));
           return orderPhone && orderPhone === cleaned;
         })
-        .map((o) => ({
-          id: String(o.id || o.orderId || o["Order ID"] || "-"),
-          date: String(o.date || o.Date || o.createdAt || ""),
-          customerName: String(
-            o.customerName || o.name || o.Name || o["Customer Name"] || ""
+        .map((o, idx) => ({
+          id: String(
+            getField(o, [
+              "orderId",
+              "OrderId",
+              "Order ID",
+              "order_id",
+              "id",
+              "ID",
+              "orderNumber",
+            ]) || `#${idx + 1}`
           ),
-          status: String(o.status || o.Status || "Processing"),
-          total: o.total || o.Total || 0,
+          date: String(
+            getField(o, ["date", "Date", "createdAt", "Created At", "timestamp", "Timestamp"])
+          ),
+          customerName: String(
+            getField(o, ["customerName", "Customer Name", "name", "Name", "fullName"])
+          ),
+          status: String(getField(o, ["status", "Status"]) || "Processing"),
+          total: parseTotal(
+            getField(o, [
+              "total",
+              "Total",
+              "totalPrice",
+              "Total Price",
+              "amount",
+              "Amount",
+              "price",
+              "Price",
+            ])
+          ),
         }));
 
       setOrders(matched);
       setSearched(true);
-    } catch (err) {
+    } catch {
       setError("Could not load orders right now. Please try again.");
     } finally {
       setLoading(false);
@@ -168,7 +228,7 @@ export default function AccountTrackPage() {
                           </span>
                         </td>
                         <td className="py-3.5 text-right font-medium">
-                          {Number(order.total).toFixed(2)} EGP
+                          {order.total.toFixed(2)} EGP
                         </td>
                       </tr>
                     ))}
