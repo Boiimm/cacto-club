@@ -6,6 +6,7 @@ interface Product {
   id: string;
   name: string;
   category: string;
+  subType?: string;
   material: string;
   price: number;
   images: string;
@@ -29,6 +30,14 @@ interface AdminUser {
 }
 
 const SESSION_KEY = "cacto_admin_session_v1";
+
+const splitMediaSources = (raw: string): string[] => {
+  if (!raw) return [];
+  return raw
+    .split(/,(?=\s*(?:https?:|data:image\/))/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
 
 export default function AdminDashboardPage() {
   const sheetUrl = process.env.NEXT_PUBLIC_GOOGLE_SHEETS_URL || "";
@@ -54,10 +63,12 @@ export default function AdminDashboardPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [pName, setPName] = useState("");
   const [pCategory, setPCategory] = useState("Mugs");
+  const [pSubType, setPSubType] = useState("");
   const [pMaterial, setPMaterial] = useState("Ceramic");
   const [pPrice, setPPrice] = useState("");
   const [pImages, setPImages] = useState("");
   const [pDesc, setPDesc] = useState("");
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   // New Admin Form
   const [newAdminUser, setNewAdminUser] = useState("");
@@ -89,9 +100,10 @@ export default function AdminDashboardPage() {
           id: String(p.id || p.ID || `PROD-${i + 1}`),
           name: String(p.name || p.Name || ""),
           category: String(p.category || p.Category || "Mugs"),
+          subType: String(p.subType || p.subtype || ""),
           material: String(p.material || p.Material || ""),
           price: parseNum(p.price ?? p.Price),
-          images: String(p.images || p.Images || p.image || ""),
+          images: String(p.images || p.Images || p.image || p.Image || ""),
           description: String(p.description || p.Description || ""),
         }))
       );
@@ -171,7 +183,6 @@ export default function AdminDashboardPage() {
           a.password === loginPass.trim()
       );
 
-      // Fallback master login if Admins sheet is still empty
       const validFallback =
         sheetAdmins.length === 0 &&
         loginUser.trim().toLowerCase() === "admin" &&
@@ -207,6 +218,7 @@ export default function AdminDashboardPage() {
     setEditingProduct(null);
     setPName("");
     setPCategory("Mugs");
+    setPSubType("");
     setPMaterial("Ceramic");
     setPPrice("");
     setPImages("");
@@ -218,11 +230,72 @@ export default function AdminDashboardPage() {
     setEditingProduct(prod);
     setPName(prod.name);
     setPCategory(prod.category);
+    setPSubType(prod.subType || "");
     setPMaterial(prod.material);
     setPPrice(String(prod.price));
     setPImages(prod.images);
     setPDesc(prod.description);
     setShowProductForm(true);
+  };
+
+  const compressImageToDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const maxSide = 700;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height && width > maxSide) {
+            height = Math.round((height * maxSide) / width);
+            width = maxSide;
+          } else if (height > maxSide) {
+            width = Math.round((width * maxSide) / height);
+            height = maxSide;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return reject("Canvas error");
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.72));
+        };
+        img.onerror = reject;
+        img.src = String(event.target?.result || "");
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleLocalFilesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImages(true);
+    try {
+      const compressedList: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const dataUrl = await compressImageToDataUrl(files[i]);
+        compressedList.push(dataUrl);
+      }
+
+      setPImages((prev) => {
+        const existing = prev.trim();
+        const joined = compressedList.join(", ");
+        return existing ? `${existing}, ${joined}` : joined;
+      });
+      notify(`${compressedList.length} image(s) ready to save`);
+    } catch {
+      notify("Failed to process selected image(s)");
+    } finally {
+      setUploadingImages(false);
+      e.target.value = "";
+    }
   };
 
   const handleSaveProduct = async (e: React.FormEvent) => {
@@ -231,6 +304,7 @@ export default function AdminDashboardPage() {
       id: editingProduct ? editingProduct.id : `PROD-${Date.now()}`,
       name: pName.trim(),
       category: pCategory,
+      subType: pSubType.trim(),
       material: pMaterial.trim(),
       price: parseNum(pPrice),
       images: pImages.trim(),
@@ -311,7 +385,6 @@ export default function AdminDashboardPage() {
 
   if (!authChecked) return null;
 
-  // Login Screen
   if (!currentUser) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f5f0e8] px-4 text-[#2c2520]">
@@ -366,6 +439,7 @@ export default function AdminDashboardPage() {
   }
 
   const totalSales = orders.reduce((sum, o) => sum + o.total, 0);
+  const previewSources = splitMediaSources(pImages);
 
   return (
     <main className="min-h-screen bg-[#f5f0e8] px-4 py-10 text-[#2c2520]">
@@ -376,7 +450,6 @@ export default function AdminDashboardPage() {
       )}
 
       <div className="mx-auto flex max-w-6xl flex-col gap-6 rounded-2xl border border-[#e2d9cd] bg-[#faf7f2] p-6 shadow-sm md:flex-row">
-        {/* Sidebar */}
         <aside className="w-full shrink-0 border-b border-[#e6ddd1] pb-4 md:w-56 md:border-b-0 md:border-r md:pb-0 md:pr-5">
           <div className="mb-5">
             <h2 className="font-serif text-lg font-medium">Cacto Club Admin</h2>
@@ -447,7 +520,6 @@ export default function AdminDashboardPage() {
           </div>
         </aside>
 
-        {/* Main Content */}
         <section className="flex-1">
           {activeTab === "dashboard" && (
             <div>
@@ -681,10 +753,9 @@ export default function AdminDashboardPage() {
         </section>
       </div>
 
-      {/* Add/Edit Product Modal */}
       {showProductForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
             <h2 className="mb-4 font-serif text-xl">
               {editingProduct ? "Edit Product" : "Add New Product"}
             </h2>
@@ -699,6 +770,7 @@ export default function AdminDashboardPage() {
                   required
                 />
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block font-medium">Category</label>
@@ -722,6 +794,7 @@ export default function AdminDashboardPage() {
                   />
                 </div>
               </div>
+
               <div>
                 <label className="mb-1 block font-medium">Price (EGP)</label>
                 <input
@@ -733,19 +806,53 @@ export default function AdminDashboardPage() {
                   required
                 />
               </div>
+
               <div>
                 <label className="mb-1 block font-medium">
-                  Image URLs (comma-separated for multiple images)
+                  Upload from Computer or Paste Image URLs
                 </label>
+
+                <label className="mb-2 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[#b8aa9c] bg-[#faf7f2] px-3 py-2.5 text-xs font-medium text-[#2c2520] transition hover:bg-[#f1eae0]">
+                  <span>
+                    {uploadingImages ? "Processing images..." : "📁 Choose Images from Computer"}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleLocalFilesUpload}
+                    disabled={uploadingImages}
+                    className="hidden"
+                  />
+                </label>
+
                 <textarea
                   rows={2}
                   value={pImages}
                   onChange={(e) => setPImages(e.target.value)}
-                  placeholder="https://drive.google.com/..., https://..."
+                  placeholder="Selected computer images appear here automatically, or paste URLs separated by commas..."
                   className="w-full rounded-lg border border-[#d6cbc0] px-3 py-2"
                   required
                 />
+
+                {previewSources.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {previewSources.map((src, idx) => (
+                      <div
+                        key={idx}
+                        className="relative h-14 w-14 overflow-hidden rounded-md border border-[#d6cbc0]"
+                      >
+                        <img
+                          src={src}
+                          alt={`Preview ${idx + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+
               <div>
                 <label className="mb-1 block font-medium">Description</label>
                 <textarea
@@ -755,6 +862,7 @@ export default function AdminDashboardPage() {
                   className="w-full rounded-lg border border-[#d6cbc0] px-3 py-2"
                 />
               </div>
+
               <div className="flex justify-end gap-2 pt-3">
                 <button
                   type="button"
